@@ -1,0 +1,109 @@
+services:
+  api:
+    build: .
+    container_name: mdt-app
+    volumes:
+      - /data/apps/mdt/dades_cog:/app/dades_cog
+      - ./main.py:/app/main.py
+      - /data/apps/mdt/mbtiles:/app/mbtiles
+      # O també pots mapejar tota la carpeta amb: - .:/app
+    environment:
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_USE_SSL: ${SMTP_USE_SSL:-true}
+      SMTP_TIMEOUT_SECONDS: ${SMTP_TIMEOUT_SECONDS:-20}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-https://trackio.es/api}
+      CONFIRMATION_SECRET: ${CONFIRMATION_SECRET:-}
+    restart: unless-stopped
+    networks:
+      - webproxy
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=webproxy"
+
+      # 🌐 MODIFICAT: Enlazamos la API al dominio principal trackio.es en la subruta /api
+      - "traefik.http.routers.mdt-api.rule=(Host(`trackio.es`) || Host(`www.trackio.es`)) && PathPrefix(`/api`)"
+
+      # 🔒 Port segur HTTPS i certificat SSL automàtic compartido
+      - "traefik.http.routers.mdt-api.entrypoints=websecure"
+      - "traefik.http.routers.mdt-api.tls.certresolver=elsmeuscertificats"
+
+      # 🔄 Filtre per netejar la ruta /api abans d'enviar-la a FastAPI (mantenim la teva lògica habitual)
+      - "traefik.http.middlewares.api-strip.stripprefix.prefixes=/api"
+      - "traefik.http.routers.mdt-api.middlewares=api-strip"
+
+      # Port intern de Uvicorn/FastAPI
+      - "traefik.http.services.mdt-api.loadbalancer.server.port=8000"
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: mdt-worker
+    environment:
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      MBTILES_DIR: /app/mbtiles
+      PLANETILER_SCHEMA: ${PLANETILER_SCHEMA:-/opt/planetiler/planetiler.yaml}
+      PLANETILER_JAR: ${PLANETILER_JAR:-/opt/planetiler/planetiler.jar}
+      PBF_MAX_DOWNLOAD_BYTES: ${PBF_MAX_DOWNLOAD_BYTES:-21474836480}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-https://trackio.es/api}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_USE_SSL: ${SMTP_USE_SSL:-true}
+      SMTP_TIMEOUT_SECONDS: ${SMTP_TIMEOUT_SECONDS:-20}
+    volumes:
+      - /data/apps/mdt/mbtiles:/app/mbtiles
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - backend
+
+  cleanup:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: mdt-cleanup
+    command: ["python", "-m", "strackrec_backend.cleanup_loop"]
+    environment:
+      MBTILES_DIR: /app/mbtiles
+      MBTILES_TTL_SECONDS: ${MBTILES_TTL_SECONDS:-86400}
+      MBTILES_CLEANUP_INTERVAL_SECONDS: ${MBTILES_CLEANUP_INTERVAL_SECONDS:-3600}
+    volumes:
+      - /data/apps/mdt/mbtiles:/app/mbtiles
+    restart: unless-stopped
+    networks:
+      - backend
+
+  redis:
+    image: redis:7-alpine
+    container_name: mdt-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - backend
+
+volumes:
+  redis_data:
+
+networks:
+  webproxy:
+    external: true
+  backend:
+    driver: bridge

@@ -1,0 +1,21 @@
+FROM python:3.12-slim-trixie
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openjdk-21-jre-headless \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements-worker.txt .
+RUN pip install --no-cache-dir -r requirements-worker.txt
+
+COPY strackrec_backend/ ./strackrec_backend/
+RUN mkdir -p /opt/planetiler
+COPY planetiler/planetiler.yaml /opt/planetiler/planetiler.yaml
+COPY planetiler/planetiler.jar /opt/planetiler/planetiler.jar
+
+ENV PLANETILER_JAR=/opt/planetiler/planetiler.jar
+ENV PLANETILER_SCHEMA=/opt/planetiler/planetiler.yaml
+ENV REDIS_URL=redis://redis:6379/0
+
+CMD ["sh", "-c", "exec rq worker --url \"$REDIS_URL\""]
