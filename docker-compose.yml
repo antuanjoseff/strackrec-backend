@@ -50,6 +50,7 @@ services:
       MBTILES_DIR: /app/mbtiles
       PLANETILER_SCHEMA: ${PLANETILER_SCHEMA:-/opt/planetiler/planetiler.yaml}
       PLANETILER_JAR: ${PLANETILER_JAR:-/opt/planetiler/planetiler.jar}
+      JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Xmx1200m}
       PBF_MAX_DOWNLOAD_BYTES: ${PBF_MAX_DOWNLOAD_BYTES:-21474836480}
       APP_PUBLIC_URL: ${APP_PUBLIC_URL:-https://trackio.es/api}
       SMTP_HOST: ${SMTP_HOST:-}
