@@ -11,7 +11,6 @@ services:
     environment:
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       APP_PUBLIC_URL: ${APP_PUBLIC_URL:-https://trackio.es/api}
-      CONFIRMATION_SECRET: ${CONFIRMATION_SECRET:-}
     restart: unless-stopped
     networks:
       - webproxy
