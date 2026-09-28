@@ -17,10 +17,13 @@ docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build -
 # Comprovar
 docker compose -f docker-compose.yml -f docker-compose.local.yml ps
 
+# Veure logs del container mdt-worker
+sudo docker logs -f mdt-worker
+
 # prova url mbtiles bboxes
 curl -i http://localhost:8000/mapes/bounds.geojson
 
-# Enviar peticio post 
+# Enviar peticio post
 curl -i -X POST http://localhost:8000/mapes/requests \
   -H 'Content-Type: application/json' \
   -d '{"name":"Catalunya","url":"https://download.geofabrik.de/europe/spain/catalunya-lastest.osm.pbf","email":"tonidelacalle@gmail.com"}'
@@ -54,3 +57,4 @@ sudo docker compose -f docker-compose.yml -f docker-compose.local.yml exec -T wo
 #   Mes comandes
 sudo -E docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --force-recreate api
 sudo docker compose -f docker-compose.yml -f docker-compose.local.yml exec -T api sh -lc 'test -n "$CONFIRMATION_SECRET" && echo "Secret configurat" || echo "FALTA el secret"'
+

@@ -121,6 +121,12 @@ def process_map(
                     f"--osm_url={validated_url}",
                     f"--osm_local_path={pbf_path}",
                     "--force",
+                    # --- NOUS PARÀMETRES PER A BAIXA RAM ---
+                    "--nodemap-type=sortedtable",  # El mode més eficient per a zones petites/mitjanes
+                    "--nodemap-storage=mmap",      # Aboca el mapa de nodes a fitxers mapejats en disc
+                    "--storage=mmap",              # Força l'ús de mmap per a la resta d'estructures
+                    "--threads=1",                 # Evita l'acumulació de feina en paral·lel a la RAM
+                    "--workers=1",
                 ],
                 check=True,
                 cwd=temp_dir,

@@ -1,3 +1,6 @@
 dades_cog/
 mbtiles/
 .venv
+.env
+environment.sh
+docker-compose.local.yml
