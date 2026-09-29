@@ -152,7 +152,7 @@ def confirmar_sol_licitud(token: str = Query(min_length=1, max_length=4096)):
                 job_id=token_id,
                 result_ttl=86400,
                 failure_ttl=86400,
-                job_timeout=1800
+                job_timeout=2400
             )
         except Exception:
             connection.delete(used_key)
