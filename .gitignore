@@ -4,3 +4,5 @@ mbtiles/
 .env
 environment.sh
 docker-compose.local.yml
+__pycache__/*
+

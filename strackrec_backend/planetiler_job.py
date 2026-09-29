@@ -69,7 +69,7 @@ def _download_pbf(url: str, destination: Path) -> None:
         headers={"User-Agent": "strackrec-backend/1.0"},
     )
 
-    with opener.open(request, timeout=60) as response:
+    with opener.open(request, timeout=300) as response:
         content_length = response.headers.get("Content-Length")
         if content_length is not None and int(content_length) > max_bytes:
             raise ValueError("El fitxer PBF supera la mida màxima permesa")
