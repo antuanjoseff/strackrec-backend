@@ -2,6 +2,7 @@ import logging
 import os
 import smtplib
 import uuid
+from html import escape
 from urllib.parse import quote
 
 from fastapi import APIRouter, HTTPException, Query, status
@@ -46,7 +47,7 @@ def _redis_queue() -> tuple[Redis, Queue]:
 def sol_licitar_mapa(request: MapRequest):
     texts = get_texts(request.lang)
     try:
-        name, url = _validate_request(request.name, str(request.url))
+        name, url = _validate_request(request.name, str(request.url), request.lang)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)
@@ -89,7 +90,9 @@ def mostrar_confirmacio(token: str = Query(min_length=1, max_length=4096)):
     token_ttl = int(os.environ.get("CONFIRMATION_TOKEN_TTL_SECONDS", "86400"))
     try:
         payload = _confirmation_serializer().loads(token, max_age=token_ttl)
-        _validate_request(payload["name"], payload["url"])
+        _validate_request(
+            payload["name"], payload["url"], payload.get("lang", DEFAULT_LANGUAGE)
+        )
     except SignatureExpired as e:
         texts = get_texts(None)
         raise HTTPException(status_code=410, detail=texts["err_expired"]) from e
@@ -113,7 +116,7 @@ def mostrar_confirmacio(token: str = Query(min_length=1, max_length=4096)):
     )
 
 
-@router.post("/mapes/confirm")
+@router.post("/mapes/confirm", response_class=HTMLResponse)
 def confirmar_sol_licitud(token: str = Query(min_length=1, max_length=4096)):
     serializer = _confirmation_serializer()
     token_ttl = int(os.environ.get("CONFIRMATION_TOKEN_TTL_SECONDS", "86400"))
@@ -125,7 +128,7 @@ def confirmar_sol_licitud(token: str = Query(min_length=1, max_length=4096)):
             payload["email"],
             payload["id"],
         )
-        _validate_request(name, url)
+        _validate_request(name, url, payload.get("lang", DEFAULT_LANGUAGE))
     except SignatureExpired as e:
         texts = get_texts(None)
         raise HTTPException(status_code=410, detail=texts["err_expired"]) from e
@@ -149,10 +152,11 @@ def confirmar_sol_licitud(token: str = Query(min_length=1, max_length=4096)):
                 url,
                 token_id,
                 email,
+                payload.get("lang", DEFAULT_LANGUAGE),
                 job_id=token_id,
                 result_ttl=86400,
                 failure_ttl=86400,
-                job_timeout=1800
+                job_timeout=1800,
             )
         except Exception:
             connection.delete(used_key)
@@ -181,8 +185,13 @@ def confirmar_sol_licitud(token: str = Query(min_length=1, max_length=4096)):
             "La tasca %s és a la cua, però no s'ha pogut enviar l'avís", job.id
         )
 
-    return {
-        "message": texts["queued_success_message"],
-        "task_id": job.id,
-        "estimated_queue_position": queue_position,
-    }
+    language = escape(str(payload.get("lang") or DEFAULT_LANGUAGE), quote=True)
+    message = escape(texts["queued_success_message"])
+    return HTMLResponse(
+        content=(
+            "<!doctype html><html lang='"
+            f"{language}'><meta charset='utf-8'>"
+            "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+            f"<p>{message}</p></html>"
+        )
+    )

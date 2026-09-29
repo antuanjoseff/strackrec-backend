@@ -34,6 +34,13 @@ class Texts(TypedDict):
     queued_subject: str
     queued_body: str
     queued_success_message: str
+    invalid_map_name: str
+    invalid_map_url: str
+    generated_map_description: str
+    map_generation_failed_subject: str
+    map_generation_failed_body: str
+    map_generation_ready_subject: str
+    map_generation_ready_body: str
 
 
 TRANSLATIONS: dict[Lang, Texts] = {
@@ -61,6 +68,17 @@ TRANSLATIONS: dict[Lang, Texts] = {
             "Identificador de la tasca: {job_id}."
         ),
         "queued_success_message": "La sol·licitud s'ha afegit a la cua.",
+        "invalid_map_name": "El nom ha de contenir entre 1 i 80 caràcters vàlids",
+        "invalid_map_url": "La URL ha de ser un fitxer .osm.pbf de download.geofabrik.de",
+        "generated_map_description": "Mapa offline de la regió {name}",
+        "map_generation_failed_subject": "No s'ha pogut generar el mapa",
+        "map_generation_failed_body": "La generació de '{name}' ha fallat. Identificador de la tasca: {task_id}.",
+        "map_generation_ready_subject": "El mapa ja està disponible",
+        "map_generation_ready_body": (
+            "La generació de '{name}' ha acabat correctament.\n\n"
+            "Descarrega el mapa (disponible durant 24 hores):\n{download_url}\n\n"
+            "Identificador de la tasca: {task_id}."
+        ),
     },
     "es": {
         "request_success_message": "Hemos enviado un enlace de confirmación al correo indicado.",
@@ -86,6 +104,17 @@ TRANSLATIONS: dict[Lang, Texts] = {
             "Identificador de la tarea: {job_id}."
         ),
         "queued_success_message": "La solicitud se ha añadido a la cola.",
+        "invalid_map_name": "El nombre debe contener entre 1 y 80 caracteres válidos",
+        "invalid_map_url": "La URL debe ser un archivo .osm.pbf de download.geofabrik.de",
+        "generated_map_description": "Mapa sin conexión de la región {name}",
+        "map_generation_failed_subject": "No se ha podido generar el mapa",
+        "map_generation_failed_body": "Ha fallado la generación de '{name}'. Identificador de la tarea: {task_id}.",
+        "map_generation_ready_subject": "El mapa ya está disponible",
+        "map_generation_ready_body": (
+            "La generación de '{name}' ha terminado correctamente.\n\n"
+            "Descarga el mapa (disponible durante 24 horas):\n{download_url}\n\n"
+            "Identificador de la tarea: {task_id}."
+        ),
     },
     "fr": {
         "request_success_message": "Nous avons envoyé un lien de confirmation à l'adresse indiquée.",
@@ -111,6 +140,17 @@ TRANSLATIONS: dict[Lang, Texts] = {
             "Identifiant de la tâche : {job_id}."
         ),
         "queued_success_message": "La demande a été ajoutée à la file d'attente.",
+        "invalid_map_name": "Le nom doit contenir entre 1 et 80 caractères valides",
+        "invalid_map_url": "L'URL doit être un fichier .osm.pbf de download.geofabrik.de",
+        "generated_map_description": "Carte hors ligne de la région {name}",
+        "map_generation_failed_subject": "La génération de la carte a échoué",
+        "map_generation_failed_body": "La génération de '{name}' a échoué. Identifiant de la tâche : {task_id}.",
+        "map_generation_ready_subject": "La carte est disponible",
+        "map_generation_ready_body": (
+            "La génération de '{name}' s'est terminée correctement.\n\n"
+            "Téléchargez la carte (disponible pendant 24 heures) :\n{download_url}\n\n"
+            "Identifiant de la tâche : {task_id}."
+        ),
     },
     "it": {
         "request_success_message": "Abbiamo inviato un link di conferma all'indirizzo indicato.",
@@ -136,6 +176,17 @@ TRANSLATIONS: dict[Lang, Texts] = {
             "Identificativo del task: {job_id}."
         ),
         "queued_success_message": "La richiesta è stata aggiunta alla coda.",
+        "invalid_map_name": "Il nome deve contenere da 1 a 80 caratteri validi",
+        "invalid_map_url": "L'URL deve essere un file .osm.pbf di download.geofabrik.de",
+        "generated_map_description": "Mappa offline della regione {name}",
+        "map_generation_failed_subject": "Impossibile generare la mappa",
+        "map_generation_failed_body": "La generazione di '{name}' non è riuscita. Identificativo del task: {task_id}.",
+        "map_generation_ready_subject": "La mappa è disponibile",
+        "map_generation_ready_body": (
+            "La generazione di '{name}' è terminata correttamente.\n\n"
+            "Scarica la mappa (disponibile per 24 ore):\n{download_url}\n\n"
+            "Identificativo del task: {task_id}."
+        ),
     },
     "de": {
         "request_success_message": "Wir haben einen Bestätigungslink an die angegebene E-Mail-Adresse gesendet.",
@@ -161,6 +212,17 @@ TRANSLATIONS: dict[Lang, Texts] = {
             "Aufgaben-ID: {job_id}."
         ),
         "queued_success_message": "Die Anfrage wurde zur Warteschlange hinzugefügt.",
+        "invalid_map_name": "Der Name muss zwischen 1 und 80 gültige Zeichen enthalten",
+        "invalid_map_url": "Die URL muss eine .osm.pbf-Datei von download.geofabrik.de sein",
+        "generated_map_description": "Offline-Karte der Region {name}",
+        "map_generation_failed_subject": "Die Karte konnte nicht erstellt werden",
+        "map_generation_failed_body": "Die Erstellung von '{name}' ist fehlgeschlagen. Aufgaben-ID: {task_id}.",
+        "map_generation_ready_subject": "Die Karte ist verfügbar",
+        "map_generation_ready_body": (
+            "Die Erstellung von '{name}' wurde erfolgreich abgeschlossen.\n\n"
+            "Lade die Karte herunter (24 Stunden verfügbar):\n{download_url}\n\n"
+            "Aufgaben-ID: {task_id}."
+        ),
     },
     "nl": {
         "request_success_message": "We hebben een bevestigingslink naar het opgegeven e-mailadres gestuurd.",
@@ -186,6 +248,17 @@ TRANSLATIONS: dict[Lang, Texts] = {
             "Taak-ID: {job_id}."
         ),
         "queued_success_message": "De aanvraag is aan de wachtrij toegevoegd.",
+        "invalid_map_name": "De naam moet 1 tot 80 geldige tekens bevatten",
+        "invalid_map_url": "De URL moet een .osm.pbf-bestand van download.geofabrik.de zijn",
+        "generated_map_description": "Offlinekaart van de regio {name}",
+        "map_generation_failed_subject": "De kaart kon niet worden gegenereerd",
+        "map_generation_failed_body": "Het genereren van '{name}' is mislukt. Taak-ID: {task_id}.",
+        "map_generation_ready_subject": "De kaart is beschikbaar",
+        "map_generation_ready_body": (
+            "Het genereren van '{name}' is voltooid.\n\n"
+            "Download de kaart (24 uur beschikbaar):\n{download_url}\n\n"
+            "Taak-ID: {task_id}."
+        ),
     },
     "lb": {
         "request_success_message": "Mir hunn e Bestätegungslink un déi uginn E-Mail geschéckt.",
@@ -211,6 +284,17 @@ TRANSLATIONS: dict[Lang, Texts] = {
             "Task-ID: {job_id}."
         ),
         "queued_success_message": "D'Ufro gouf an d'Warteschlaang gesat.",
+        "invalid_map_name": "Den Numm muss tëscht 1 an 80 gülteg Zeechen enthalen",
+        "invalid_map_url": "D'URL muss eng .osm.pbf-Datei vun download.geofabrik.de sinn",
+        "generated_map_description": "Offline-Kaart vun der Regioun {name}",
+        "map_generation_failed_subject": "D'Kaart konnt net erstallt ginn",
+        "map_generation_failed_body": "D'Erstelle vun '{name}' ass feelgeschloen. Task-ID: {task_id}.",
+        "map_generation_ready_subject": "D'Kaart ass disponibel",
+        "map_generation_ready_body": (
+            "D'Erstelle vun '{name}' ass erfollegräich ofgeschloss.\n\n"
+            "Luet d'Kaart erof (24 Stonne disponibel):\n{download_url}\n\n"
+            "Task-ID: {task_id}."
+        ),
     },
     "en": {
         "request_success_message": "We've sent a confirmation link to the given email.",
@@ -236,6 +320,17 @@ TRANSLATIONS: dict[Lang, Texts] = {
             "Task ID: {job_id}."
         ),
         "queued_success_message": "The request has been added to the queue.",
+        "invalid_map_name": "The name must contain between 1 and 80 valid characters",
+        "invalid_map_url": "The URL must be a .osm.pbf file from download.geofabrik.de",
+        "generated_map_description": "Offline map of the {name} region",
+        "map_generation_failed_subject": "The map could not be generated",
+        "map_generation_failed_body": "Generation of '{name}' failed. Task ID: {task_id}.",
+        "map_generation_ready_subject": "The map is ready",
+        "map_generation_ready_body": (
+            "Generation of '{name}' completed successfully.\n\n"
+            "Download the map (available for 24 hours):\n{download_url}\n\n"
+            "Task ID: {task_id}."
+        ),
     },
 }
 # Flamenc: nederlandstalig (Belgïe), mateixos textos que el neerlandès.

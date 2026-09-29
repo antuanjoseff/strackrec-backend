@@ -11,6 +11,7 @@ import urllib.request
 from pathlib import Path
 
 from .email_service import send_email
+from .translations import DEFAULT_LANGUAGE, Lang, get_texts
 
 GEOFABRIK_HOST = "download.geofabrik.de"
 DEFAULT_MAX_DOWNLOAD_BYTES = 20 * 1024**3
@@ -33,13 +34,16 @@ class GeofabrikRedirectHandler(urllib.request.HTTPRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
-def _validate_request(name: str, url: str) -> tuple[str, str]:
+def _validate_request(
+    name: str, url: str, lang: Lang = DEFAULT_LANGUAGE
+) -> tuple[str, str]:
+    texts = get_texts(lang)
     # Elimina accents/diacritics (ñ->n, à->a...) abans de descartar caracters no ascii
     normalized = unicodedata.normalize("NFKD", name.lower())
     normalized = "".join(c for c in normalized if not unicodedata.combining(c))
     slug = re.sub(r"[^a-z0-9_-]+", "-", normalized).strip("-_")
     if not slug or len(slug) > 80:
-        raise ValueError("El nom ha de contenir entre 1 i 80 caràcters vàlids")
+        raise ValueError(texts["invalid_map_name"])
 
     parsed = urllib.parse.urlparse(url)
     if (
@@ -50,7 +54,7 @@ def _validate_request(name: str, url: str) -> tuple[str, str]:
         or parsed.password is not None
         or not parsed.path.lower().endswith(".osm.pbf")
     ):
-        raise ValueError("La URL ha de ser un fitxer .osm.pbf de download.geofabrik.de")
+        raise ValueError(texts["invalid_map_url"])
 
     return slug, url
 
@@ -80,11 +84,16 @@ def _download_pbf(url: str, destination: Path) -> None:
 
 
 def process_map(
-    name: str, url: str, task_id: str, email: str | None = None
+    name: str,
+    url: str,
+    task_id: str,
+    email: str | None = None,
+    lang: Lang = DEFAULT_LANGUAGE,
 ) -> dict[str, str]:
     """Download a Geofabrik PBF and generate an MBTiles file with Planetiler."""
+    texts = get_texts(lang)
     try:
-        slug, validated_url = _validate_request(name, url)
+        slug, validated_url = _validate_request(name, url, lang)
         mbtiles_dir = Path(os.environ.get("MBTILES_DIR", "/app/mbtiles")).resolve()
         schema_path = Path(
             os.environ.get("PLANETILER_SCHEMA", "/app/planetiler.yaml")
@@ -142,7 +151,10 @@ def process_map(
                     "INSERT OR REPLACE INTO metadata (name, value) VALUES (?, ?)",
                     [
                         ("name", slug),
-                        ("description", f"Mapa offline de la regió {slug}"),
+                        (
+                            "description",
+                            texts["generated_map_description"].format(name=slug),
+                        ),
                         ("file_size_bytes", str(file_size_bytes)),
                     ],
                 )
@@ -154,8 +166,10 @@ def process_map(
             try:
                 send_email(
                     email,
-                    "No s'ha pogut generar el mapa",
-                    f"La generació de '{name}' ha fallat. Identificador de la tasca: {task_id}.",
+                    texts["map_generation_failed_subject"],
+                    texts["map_generation_failed_body"].format(
+                        name=name, task_id=task_id
+                    ),
                 )
             except Exception:
                 logger.exception(
@@ -171,10 +185,10 @@ def process_map(
         try:
             send_email(
                 email,
-                "El mapa ja està disponible",
-                f"La generació de '{name}' ha acabat correctament.\n\n"
-                f"Descarrega el mapa (disponible durant 24 hores):\n{download_url}\n\n"
-                f"Identificador de la tasca: {task_id}.",
+                texts["map_generation_ready_subject"],
+                texts["map_generation_ready_body"].format(
+                    name=name, download_url=download_url, task_id=task_id
+                ),
             )
         except Exception:
             logger.exception(
