@@ -5,4 +5,5 @@ mbtiles/
 environment.sh
 docker-compose.local.yml
 __pycache__/*
-
+strackrec_backend/__pycache__/
+strackrec_backend/routers/__pycache__/
