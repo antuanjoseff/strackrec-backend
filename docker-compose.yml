@@ -49,6 +49,7 @@ services:
       APP_PUBLIC_URL: ${APP_PUBLIC_URL:-https://trackio.es/api}
     volumes:
       - /data/apps/mdt/mbtiles:/app/mbtiles
+      - /data/apps/mdt/dades_cog:/app/dades_cog:ro
     depends_on:
       redis:
         condition: service_healthy

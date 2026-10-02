@@ -1,10 +1,13 @@
 import os
 import logging
+import math
 import re
 import sqlite3
 import subprocess
+import struct
 import tempfile
 import unicodedata
+import zlib
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -83,6 +86,148 @@ def _download_pbf(url: str, destination: Path) -> None:
                 output.write(chunk)
 
 
+def _proto_fields(data: bytes):
+    """Itera (camp, valor) d'un missatge protobuf; valor es int o bytes."""
+    pos = 0
+    while pos < len(data):
+        key = shift = 0
+        while True:
+            b = data[pos]
+            pos += 1
+            key |= (b & 0x7F) << shift
+            shift += 7
+            if not b & 0x80:
+                break
+        field, wire = key >> 3, key & 7
+        if wire == 0:
+            value = shift = 0
+            while True:
+                b = data[pos]
+                pos += 1
+                value |= (b & 0x7F) << shift
+                shift += 7
+                if not b & 0x80:
+                    break
+            yield field, value
+        elif wire == 2:
+            length = shift = 0
+            while True:
+                b = data[pos]
+                pos += 1
+                length |= (b & 0x7F) << shift
+                shift += 7
+                if not b & 0x80:
+                    break
+            yield field, data[pos : pos + length]
+            pos += length
+        elif wire == 1:
+            pos += 8
+        elif wire == 5:
+            pos += 4
+        else:
+            raise ValueError("Wire type protobuf no suportat")
+
+
+def _pbf_bbox(pbf_path: Path) -> tuple[float, float, float, float] | None:
+    """Retorna (oest, sud, est, nord) de la capcalera del PBF, o None."""
+    with pbf_path.open("rb") as f:
+        header_len = struct.unpack(">I", f.read(4))[0]
+        datasize = 0
+        for field, value in _proto_fields(f.read(header_len)):
+            if field == 3:
+                datasize = value
+        blob = f.read(datasize)
+
+    raw = None
+    for field, value in _proto_fields(blob):
+        if field == 1:
+            raw = value
+        elif field == 3:
+            raw = zlib.decompress(value)
+    if raw is None:
+        return None
+
+    def unzigzag(n: int) -> int:
+        return (n >> 1) ^ -(n & 1)
+
+    for field, value in _proto_fields(raw):
+        if field == 1:
+            box = {f: unzigzag(v) / 1e9 for f, v in _proto_fields(value)}
+            if {1, 2, 3, 4} <= box.keys():
+                return box[1], box[4], box[2], box[3]
+    return None
+
+
+def _generate_contours(
+    pbf_path: Path, cog_dir: Path, work_dir: Path, interval: int = 20
+) -> Path | None:
+    """Genera un GeoPackage de corbes de nivell amb l'extensio del PBF.
+
+    Retorna None si no hi ha COGs que cobreixin la zona.
+    """
+    if not cog_dir.is_dir():
+        return None
+    bbox = _pbf_bbox(pbf_path)
+    if bbox is None:
+        logger.warning("El PBF no conte bbox a la capcalera; sense corbes")
+        return None
+    west, south, east, north = bbox
+
+    # Els COG son tessel·les d'1x1 graus anomenades per la cantonada SW (N42E002).
+    tiles = []
+    for lat in range(math.floor(south), math.ceil(north)):
+        for lon in range(math.floor(west), math.ceil(east)):
+            ns = "N" if lat >= 0 else "S"
+            ew = "E" if lon >= 0 else "W"
+            tile = cog_dir / f"{ns}{abs(lat):02d}{ew}{abs(lon):03d}_cog.tif"
+            if tile.is_file():
+                tiles.append(tile)
+    if not tiles:
+        logger.info("Sense COGs per a la zona; es genera sense corbes")
+        return None
+
+    list_file = work_dir / "cogs.txt"
+    list_file.write_text("\n".join(str(t) for t in tiles))
+    vrt = work_dir / "cogs.vrt"
+    cropped = work_dir / "cropped.vrt"
+    gpkg = work_dir / "corbes.gpkg"
+    subprocess.run(
+        ["gdalbuildvrt", "-input_file_list", str(list_file), str(vrt)], check=True
+    )
+    subprocess.run(
+        [
+            "gdal_translate",
+            "-of",
+            "VRT",
+            "-projwin",
+            str(west),
+            str(north),
+            str(east),
+            str(south),
+            str(vrt),
+            str(cropped),
+        ],
+        check=True,
+    )
+    subprocess.run(
+        [
+            "gdal_contour",
+            "-i",
+            str(interval),
+            "-a",
+            "ele",
+            "-f",
+            "GPKG",
+            "-nln",
+            "contour",
+            str(cropped),
+            str(gpkg),
+        ],
+        check=True,
+    )
+    return gpkg if gpkg.is_file() else None
+
+
 def process_map(
     name: str,
     url: str,
@@ -98,6 +243,12 @@ def process_map(
         schema_path = Path(
             os.environ.get("PLANETILER_SCHEMA", "/app/planetiler.yaml")
         ).resolve()
+        contour_schema_path = Path(
+            os.environ.get(
+                "PLANETILER_CONTOUR_SCHEMA", "/opt/planetiler/planetiler-corbes.yaml"
+            )
+        ).resolve()
+        cog_dir = Path(os.environ.get("COG_DIR", "/app/dades_cog")).resolve()
         planetiler_jar = Path(
             os.environ.get("PLANETILER_JAR", "/opt/planetiler/planetiler.jar")
         ).resolve()
@@ -119,22 +270,33 @@ def process_map(
             generated_mbtiles = temp_path / "output.mbtiles"
             _download_pbf(validated_url, pbf_path)
 
+            contours = None
+            if contour_schema_path.is_file():
+                try:
+                    contours = _generate_contours(pbf_path, cog_dir, temp_path)
+                except Exception:
+                    logger.exception("Error generant corbes; es continua sense")
+
+            active_schema = contour_schema_path if contours else schema_path
+            extra_args = [f"--corbes_local_path={contours}"] if contours else []
+
             subprocess.run(
                 [
                     "java",
                     "-jar",
                     str(planetiler_jar),
                     "generate-custom",
-                    f"--schema={schema_path}",
+                    f"--schema={active_schema}",
+                    *extra_args,
                     f"--output={generated_mbtiles}",
                     f"--osm_url={validated_url}",
                     f"--osm_local_path={pbf_path}",
                     "--force",
                     # --- NOUS PARÀMETRES PER A BAIXA RAM ---
                     "--nodemap-type=sortedtable",  # El mode més eficient per a zones petites/mitjanes
-                    "--nodemap-storage=mmap",      # Aboca el mapa de nodes a fitxers mapejats en disc
-                    "--storage=mmap",              # Força l'ús de mmap per a la resta d'estructures
-                    "--threads=1",                 # Evita l'acumulació de feina en paral·lel a la RAM
+                    "--nodemap-storage=mmap",  # Aboca el mapa de nodes a fitxers mapejats en disc
+                    "--storage=mmap",  # Força l'ús de mmap per a la resta d'estructures
+                    "--threads=1",  # Evita l'acumulació de feina en paral·lel a la RAM
                     "--workers=1",
                 ],
                 check=True,
