@@ -26,7 +26,7 @@ curl -i http://localhost:8000/mapes/bounds.geojson
 # Enviar peticio post
 curl -i -X POST http://localhost:8000/mapes/requests \
   -H 'Content-Type: application/json' \
-  -d '{"name":"Catalunya","url":"https://download.geofabrik.de/europe/spain/catalunya-lastest.osm.pbf","email":"tonidelacalle@gmail.com"}'
+  -d '{"name":"Catalunya","url":"https://download.geofabrik.de/europe/spain/cataluna-latest.osm.pbf","email":"tonidelacalle@gmail.com","lang":"ca"}'
 
 curl -i -X POST http://localhost:8000/mapes/requests \
   -H 'Content-Type: application/json' \
