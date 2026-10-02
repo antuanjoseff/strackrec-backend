@@ -1,0 +1,438 @@
+schema_name: OSM Catalunya Muntanya i Camins amb corbes de nivell
+
+schema_description: >-
+  Cartografia vectorial d'OpenStreetMap orientada a senderisme,
+  compatible amb l'estil OSM Bright offline.
+
+attribution: >-
+  <a href="https://www.openstreetmap.org/copyright"
+  target="_blank">&copy; OpenStreetMap contributors</a>
+
+version: "1.0"
+
+is_overlay: false
+
+args:
+  osm_url:
+    description: URL del fitxer OSM PBF d'entrada
+    default: https://download.geofabrik.de/europe/spain/cataluna-latest.osm.pbf
+  osm_local_path:
+    description: Ruta local del fitxer OSM PBF descarregat
+    default: catalunya.pbf
+  corbes_local_path:
+    description: Ruta local del GeoPackage amb les corbes de nivell
+    default: corbes.gpkg
+
+sources:
+  osm:
+    type: osm
+    url: "${ args.osm_url }"
+    local_path: "${ args.osm_local_path }"
+  corbes:
+    type: geopackage
+    local_path: "${ args.corbes_local_path }"
+
+layers:
+  # Els identificadors de capa i els atributs class/subclass/brunnel/ramp
+  # segueixen l'esquema que espera assets/osm_bright_offline.json.
+
+  - id: building
+    features:
+      - source: osm
+        geometry: polygon
+        min_zoom: 13
+        include_when:
+          building: __any__
+        exclude_when:
+          building: no
+        attributes:
+          - key: building
+            tag_value: building
+          - key: name
+            tag_value: name
+          - key: "building:levels"
+            tag_value: "building:levels"
+          - key: height
+            tag_value: height
+          - key: "roof:shape"
+            tag_value: "roof:shape"
+
+  - id: transportation
+    features:
+      - source: osm
+        geometry: line
+        min_size: 0
+        min_zoom:
+          default_value: 12
+          overrides:
+            5:
+              highway: [motorway, motorway_link]
+            6:
+              highway: [trunk, trunk_link]
+            7:
+              highway: [primary, primary_link]
+            8:
+              highway: [secondary, secondary_link]
+            9:
+              highway: [tertiary, tertiary_link]
+            10:
+              highway: [unclassified, residential, living_street]
+            11:
+              highway: [service, pedestrian, track, cycleway]
+            12:
+              highway: [footway, path, bridleway, steps]
+        include_when:
+          highway: __any__
+        attributes:
+          - key: name
+            tag_value: name
+          - key: "name:latin"
+            tag_value: name
+          - key: ref
+            tag_value: ref
+          - key: highway
+            tag_value: highway
+          - key: surface
+            tag_value: surface
+          - key: smoothness
+            tag_value: smoothness
+          - key: tracktype
+            tag_value: tracktype
+          - key: sac_scale
+            tag_value: sac_scale
+          - key: trail_visibility
+            tag_value: trail_visibility
+          - key: "mtb:scale"
+            tag_value: "mtb:scale"
+          - key: "mtb:scale:uphill"
+            tag_value: "mtb:scale:uphill"
+          - key: bicycle
+            tag_value: bicycle
+          - key: foot
+            tag_value: foot
+          - key: horse
+            tag_value: horse
+          - key: access
+            tag_value: access
+          - key: motor_vehicle
+            tag_value: motor_vehicle
+          - key: oneway
+            tag_value: oneway
+            type: direction
+          - key: class
+            value:
+              motorway:
+                highway: [motorway, motorway_link]
+              trunk:
+                highway: [trunk, trunk_link]
+              primary:
+                highway: [primary, primary_link]
+              secondary:
+                highway: [secondary, secondary_link]
+              tertiary:
+                highway: [tertiary, tertiary_link]
+              minor:
+                highway: [unclassified, residential, living_street]
+              service:
+                highway: service
+              track:
+                highway: track
+              path:
+                highway: [path, footway, cycleway, bridleway, steps, pedestrian]
+          - key: subclass
+            tag_value: highway
+          - key: brunnel
+            value:
+              bridge:
+                bridge: [yes, "1", "true"]
+              tunnel:
+                tunnel: [yes, "1", "true"]
+          - key: ramp
+            value:
+              1:
+                highway:
+                  [
+                    motorway_link,
+                    trunk_link,
+                    primary_link,
+                    secondary_link,
+                    tertiary_link,
+                  ]
+              0: otherwise
+            type: integer
+
+  - id: transportation_name
+    features:
+      - source: osm
+        geometry: line
+        min_zoom: 10
+        include_when:
+          highway: __any__
+        exclude_when:
+          name: ""
+        attributes:
+          - key: name
+            tag_value: name
+          - key: "name:latin"
+            tag_value: name
+          - key: ref
+            tag_value: ref
+          - key: class
+            value:
+              motorway:
+                highway: [motorway, motorway_link]
+              trunk:
+                highway: [trunk, trunk_link]
+              primary:
+                highway: [primary, primary_link]
+              secondary:
+                highway: [secondary, secondary_link]
+              tertiary:
+                highway: [tertiary, tertiary_link]
+              minor:
+                highway: [unclassified, residential, living_street, service]
+              track:
+                highway: track
+              path:
+                highway: [path, footway, cycleway, bridleway, steps, pedestrian]
+
+  # Llacs, embassaments i altres masses d'aigua poligonals d'OSM.
+  - id: water
+    features:
+      - source: osm
+        geometry: polygon
+        min_zoom: 0
+        include_when:
+          natural: [water, bay, strait]
+          landuse: [reservoir, basin]
+          waterway: [riverbank, dock]
+        attributes:
+          - key: name
+            tag_value: name
+          - key: "name:latin"
+            tag_value: name
+          - key: class
+            value:
+              coalesce:
+                - tag_value: natural
+                - tag_value: landuse
+                - tag_value: waterway
+                - "water"
+
+  - id: waterway
+    features:
+      - source: osm
+        geometry: line
+        min_size: 0
+        min_zoom:
+          default_value: 11
+          overrides:
+            8:
+              waterway: river
+            9:
+              waterway: [river, canal]
+            10:
+              waterway: [river, canal, stream]
+        include_when:
+          waterway: [river, stream, canal, ditch, drain, wadi]
+          natural: coastline
+        attributes:
+          - key: name
+            tag_value: name
+          - key: "name:latin"
+            tag_value: name
+          - key: class
+            value:
+              coalesce:
+                - tag_value: waterway
+                - "coastline"
+          - key: intermittent
+            value:
+              1:
+                intermittent: [yes, "1", "true"]
+              0: otherwise
+            type: integer
+
+  - id: landcover
+    features:
+      - source: osm
+        geometry: polygon
+        min_zoom: 5
+        include_when:
+          natural:
+            [
+              wood,
+              scrub,
+              heath,
+              grassland,
+              glacier,
+              bare_rock,
+              scree,
+              sand,
+              beach,
+            ]
+          landuse: [forest, meadow, orchard, vineyard, grass, farmland]
+        attributes:
+          - key: class
+            value:
+              wood:
+                natural: wood
+              grass:
+                natural: [grassland, scrub, heath]
+              sand:
+                natural: [sand, beach]
+              glacier:
+                natural: glacier
+          - key: subclass
+            value:
+              ice_shelf:
+                natural: glacier
+
+  - id: landuse
+    features:
+      - source: osm
+        geometry: polygon
+        min_zoom: 8
+        include_when:
+          landuse: [residential, industrial, commercial, cemetery, railway]
+          amenity: [school, university, hospital]
+        attributes:
+          - key: class
+            value:
+              residential:
+                landuse: residential
+              industrial:
+                landuse: industrial
+              commercial:
+                landuse: commercial
+              cemetery:
+                landuse: cemetery
+              railway:
+                landuse: railway
+              school:
+                amenity: [school, university]
+              hospital:
+                amenity: hospital
+
+  - id: park
+    features:
+      - source: osm
+        geometry: polygon
+        min_zoom: 8
+        include_when:
+          leisure: [park, garden, nature_reserve, recreation_ground]
+        attributes:
+          - key: class
+            value:
+              public_park:
+                leisure: [park, garden, recreation_ground]
+
+  - id: mountain_peak
+    features:
+      - source: osm
+        geometry: point
+        min_zoom: 10
+        include_when:
+          natural: [peak, saddle]
+        attributes:
+          - key: name
+            tag_value: name
+          - key: "name:latin"
+            tag_value: name
+          - key: ele
+            tag_value: ele
+          - key: class
+            tag_value: natural
+
+  - id: poi
+    features:
+      - source: osm
+        geometry: point
+        min_zoom: 12
+        include_when:
+          amenity: [drinking_water, fountain, parking, shelter]
+          tourism:
+            [alpine_hut, wilderness_hut, viewpoint, camp_site, caravan_site]
+          natural: spring
+        attributes:
+          - key: name
+            tag_value: name
+          - key: "name:latin"
+            tag_value: name
+          - key: class
+            value:
+              parking:
+                amenity: parking
+              picnic_site:
+                tourism: picnic_site
+          - key: subclass
+            value:
+              drinking_water:
+                amenity: drinking_water
+              spring:
+                natural: spring
+              fountain:
+                amenity: fountain
+              shelter:
+                amenity: shelter
+              alpine_hut:
+                tourism: alpine_hut
+              wilderness_hut:
+                tourism: wilderness_hut
+              viewpoint:
+                tourism: viewpoint
+              camp_site:
+                tourism: camp_site
+              caravan_site:
+                tourism: caravan_site
+
+  # Fonts d'aigua: tant punts etiquetats com amenity=drinking_water
+  # com fonts naturals etiquetades amb natural=spring.
+  - id: water_points
+    features:
+      - source: osm
+        geometry: point
+        min_zoom: 13
+        include_when:
+          amenity: drinking_water
+        attributes:
+          - key: amenity
+          - key: name
+          - key: access
+          - key: drinking_water
+
+      - source: osm
+        geometry: point
+        min_zoom: 13
+        include_when:
+          natural: spring
+        attributes:
+          - key: natural
+          - key: name
+          - key: access
+
+  - id: place
+    features:
+      - source: osm
+        geometry: point
+        min_zoom: 4
+        include_when:
+          place: [city, town, village, hamlet, suburb, neighbourhood, locality]
+        attributes:
+          - key: name
+            tag_value: name
+          - key: "name:latin"
+            tag_value: name
+          - key: class
+            tag_value: place
+
+  # Corbes de nivell del GeoPackage (capa contour, camp ele en metres).
+  - id: contour
+    features:
+      - source: corbes
+        geometry: line
+        min_size: 0
+        min_zoom: 11
+        attributes:
+          - key: ele
+            tag_value: ele
