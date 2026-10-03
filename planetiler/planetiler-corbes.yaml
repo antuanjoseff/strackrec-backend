@@ -444,7 +444,7 @@ layers:
       - source: corbes
         geometry: line
         min_size: 0
-        min_zoom: 11
+        min_zoom: 10
         attributes:
           - key: ele
             tag_value: ele
