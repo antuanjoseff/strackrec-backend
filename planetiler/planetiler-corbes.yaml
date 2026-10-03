@@ -61,7 +61,7 @@ layers:
     features:
       - source: osm
         geometry: line
-        min_size: 0
+        min_size: 2
         min_zoom:
           default_value: 12
           overrides:
@@ -201,7 +201,8 @@ layers:
     features:
       - source: osm
         geometry: polygon
-        min_zoom: 0
+        min_zoom: 4
+        min_size: 4
         include_when:
           natural: [water, bay, strait]
           landuse: [reservoir, basin]
@@ -257,7 +258,8 @@ layers:
     features:
       - source: osm
         geometry: polygon
-        min_zoom: 5
+        min_zoom: 8
+        min_size: 4
         include_when:
           natural:
             [
@@ -415,7 +417,17 @@ layers:
     features:
       - source: osm
         geometry: point
-        min_zoom: 4
+        min_zoom:
+          default_value: 11
+          overrides:
+            4:
+              place: city
+            6:
+              place: town
+            8:
+              place: village
+            10:
+              place: [hamlet, suburb]
         include_when:
           place: [city, town, village, hamlet, suburb, neighbourhood, locality]
         attributes:
