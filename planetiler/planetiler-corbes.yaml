@@ -81,7 +81,7 @@ layers:
               highway: [residential, living_street, track]
             10:
               highway: [service, pedestrian, cycleway]
-            11:
+            14:
               highway: [footway, path, bridleway, steps]
         include_when:
           highway: __any__
@@ -442,6 +442,22 @@ layers:
 
   - id: place
     features:
+      # Les comarques d'OSM s'identifiquen com a boundary=administrative,
+      # admin_level=7. Se n'emet el nom des del zoom 7.
+      - source: osm
+        geometry: polygon
+        min_zoom: 7
+        include_when:
+          boundary: administrative
+          admin_level: "7"
+        attributes:
+          - key: name
+            tag_value: name
+          - key: "name:latin"
+            tag_value: name
+          - key: class
+            value: place
+
       - source: osm
         geometry: point
         min_zoom:
