@@ -88,34 +88,45 @@ layers:
             tag_value: name
           - key: "name:latin"
             tag_value: name
+            min_zoom: 12
           - key: ref
             tag_value: ref
           - key: highway
             tag_value: highway
           - key: surface
             tag_value: surface
+            min_zoom: 12
           - key: smoothness
             tag_value: smoothness
+            min_zoom: 12
           - key: tracktype
             tag_value: tracktype
+            min_zoom: 12
           - key: sac_scale
             tag_value: sac_scale
+            min_zoom: 12
           - key: trail_visibility
             tag_value: trail_visibility
+            min_zoom: 12
           - key: "mtb:scale"
             tag_value: "mtb:scale"
           - key: "mtb:scale:uphill"
             tag_value: "mtb:scale:uphill"
           - key: bicycle
             tag_value: bicycle
+            min_zoom: 12
           - key: foot
             tag_value: foot
+            min_zoom: 12
           - key: horse
             tag_value: horse
+            min_zoom: 12
           - key: access
             tag_value: access
+            min_zoom: 12
           - key: motor_vehicle
             tag_value: motor_vehicle
+            min_zoom: 12
           - key: oneway
             tag_value: oneway
             type: direction
@@ -160,6 +171,8 @@ layers:
                   ]
               0: otherwise
             type: integer
+    tile_post_process:
+      merge_line_strings: {min_length: 0, tolerance: -1, buffer: 4}
 
   - id: transportation_name
     features:
