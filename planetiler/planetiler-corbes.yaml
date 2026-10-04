@@ -61,25 +61,27 @@ layers:
     features:
       - source: osm
         geometry: line
-        min_size: 2
+        min_size: 0
         min_zoom:
           default_value: 12
           overrides:
-            5:
+            3:
               highway: [motorway, motorway_link]
-            6:
+            4:
               highway: [trunk, trunk_link]
-            7:
+            5:
               highway: [primary, primary_link]
-            8:
+            6:
               highway: [secondary, secondary_link]
-            9:
+            7:
               highway: [tertiary, tertiary_link]
+            8:
+              highway: [unclassified]
+            9:
+              highway: [residential, living_street, track]
             10:
-              highway: [unclassified, residential, living_street]
+              highway: [service, pedestrian, cycleway]
             11:
-              highway: [service, pedestrian, track, cycleway]
-            12:
               highway: [footway, path, bridleway, steps]
         include_when:
           highway: __any__
@@ -178,7 +180,17 @@ layers:
     features:
       - source: osm
         geometry: line
-        min_zoom: 10
+        min_zoom:
+          default_value: 10
+          overrides:
+            6:
+              highway: [motorway, trunk]
+            7:
+              highway: [primary]
+            8:
+              highway: [secondary]
+            9:
+              highway: [tertiary]
         include_when:
           highway: __any__
         exclude_when:
@@ -214,8 +226,8 @@ layers:
     features:
       - source: osm
         geometry: polygon
-        min_zoom: 4
-        min_size: 4
+        min_zoom: 0
+        min_size: 2
         include_when:
           natural: [water, bay, strait]
           landuse: [reservoir, basin]
@@ -241,11 +253,11 @@ layers:
         min_zoom:
           default_value: 11
           overrides:
-            8:
+            5:
               waterway: river
-            9:
+            7:
               waterway: [river, canal]
-            10:
+            9:
               waterway: [river, canal, stream]
         include_when:
           waterway: [river, stream, canal, ditch, drain, wadi]
@@ -271,7 +283,7 @@ layers:
     features:
       - source: osm
         geometry: polygon
-        min_zoom: 8
+        min_zoom: 4
         min_size: 4
         include_when:
           natural:
@@ -308,6 +320,7 @@ layers:
       - source: osm
         geometry: polygon
         min_zoom: 8
+        min_size: 4
         include_when:
           landuse: [residential, industrial, commercial, cemetery, railway]
           amenity: [school, university, hospital]
@@ -333,7 +346,8 @@ layers:
     features:
       - source: osm
         geometry: polygon
-        min_zoom: 8
+        min_zoom: 5
+        min_size: 4
         include_when:
           leisure: [park, garden, nature_reserve, recreation_ground]
         attributes:
@@ -346,7 +360,7 @@ layers:
     features:
       - source: osm
         geometry: point
-        min_zoom: 10
+        min_zoom: 8
         include_when:
           natural: [peak, saddle]
         attributes:
@@ -433,14 +447,18 @@ layers:
         min_zoom:
           default_value: 11
           overrides:
-            4:
+            3:
               place: city
-            6:
+            4:
               place: town
-            8:
+            6:
               place: village
+            8:
+              place: [hamlet]
+            9:
+              place: [suburb]
             10:
-              place: [hamlet, suburb]
+              place: [neighbourhood]
         include_when:
           place: [city, town, village, hamlet, suburb, neighbourhood, locality]
         attributes:
