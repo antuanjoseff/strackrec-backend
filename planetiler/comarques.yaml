@@ -1,0 +1,19 @@
+﻿schema_name: comarques
+schema_description: Comarques de Catalunya
+
+sources:
+  comarques_geojson:
+    type: geojson
+    url: comarques.geojson
+
+layers:
+  - id: comarques
+    features:
+      - source: comarques_geojson
+        geometry: polygon
+        min_zoom: 4
+        max_zoom: 14
+        attributes:
+          - key: nom
+          - key: wikidata
+          - key: idescat

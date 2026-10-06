@@ -1,0 +1,32 @@
+# schema_name: municipis_custom
+# schema_description: Només conté les dades del GeoJSON de municipis
+
+# sources:
+#   municipis_geojson:
+#     type: geojson
+#     url: municipis_cat.geojson
+
+# layers:
+#   - id: municipis
+#     features:
+#       - source: municipis_geojson
+#         min_zoom: 6
+#         max_zoom: 11
+schema_name: municipis_custom
+schema_description: Només conté les dades del GeoJSON de municipis
+
+sources:
+  municipis_geojson:
+    type: geojson
+    url: municipis_cat.geojson
+
+layers:
+  - id: municipis
+    features:
+      - source: municipis_geojson
+        geometry: polygon          # <--- VITAL: Diu a QGIS que són polígons per poder-los pintar
+        min_zoom: 6
+        max_zoom: 16
+        attributes:
+          - key: "name"
+          - key: "id"

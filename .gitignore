@@ -7,3 +7,4 @@ docker-compose.local.yml
 __pycache__/*
 strackrec_backend/__pycache__/
 strackrec_backend/routers/__pycache__/
+planetiler/data/
