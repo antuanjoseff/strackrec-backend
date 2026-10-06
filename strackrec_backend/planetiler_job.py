@@ -1,3 +1,4 @@
+import json
 import os
 import logging
 import math
@@ -158,8 +159,88 @@ def _pbf_bbox(pbf_path: Path) -> tuple[float, float, float, float] | None:
     return None
 
 
+def _download_poly(pbf_url: str, destination: Path) -> bool:
+    """Baixa el .poly de Geofabrik (poligon real de la regio). Best effort."""
+    poly_url = re.sub(r"(-latest|-\d{6})?\.osm\.pbf$", ".poly", pbf_url)
+    if poly_url == pbf_url:
+        return False
+    opener = urllib.request.build_opener(GeofabrikRedirectHandler())
+    request = urllib.request.Request(
+        poly_url, headers={"User-Agent": "strackrec-backend/1.0"}
+    )
+    try:
+        with opener.open(request, timeout=60) as response:
+            destination.write_bytes(response.read(10 * 1024 * 1024))
+    except Exception:
+        logger.info("No s'ha pogut baixar el .poly; s'usa el bbox del PBF")
+        return False
+    return True
+
+
+def _point_in_ring(x: float, y: float, ring: list[list[float]]) -> bool:
+    inside = False
+    for (x1, y1), (x2, y2) in zip(ring, ring[1:]):
+        if (y1 > y) != (y2 > y) and x < (x2 - x1) * (y - y1) / (y2 - y1) + x1:
+            inside = not inside
+    return inside
+
+
+def _poly_to_geojson(poly_path: Path, geojson_path: Path) -> bool:
+    """Converteix un fitxer .poly (Osmosis) a un GeoJSON MultiPolygon."""
+    outers: list[list[list[float]]] = []
+    holes: list[list[list[float]]] = []
+    ring: list[list[float]] | None = None
+    is_hole = False
+    for line in poly_path.read_text().splitlines()[1:]:
+        line = line.strip()
+        if not line:
+            continue
+        if line == "END":
+            if ring is not None:
+                if ring[0] != ring[-1]:
+                    ring.append(ring[0])
+                if len(ring) >= 4:
+                    (holes if is_hole else outers).append(ring)
+                ring = None
+            continue
+        if ring is None:
+            is_hole = line.startswith("!")
+            ring = []
+            continue
+        lon, lat = line.split()[:2]
+        ring.append([float(lon), float(lat)])
+    if not outers:
+        return False
+    polygons = [[o] for o in outers]
+    for hole in holes:
+        x, y = hole[0]
+        for polygon in polygons:
+            if _point_in_ring(x, y, polygon[0]):
+                polygon.append(hole)
+                break
+    geojson_path.write_text(
+        json.dumps(
+            {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "properties": {},
+                        "geometry": {"type": "MultiPolygon", "coordinates": polygons},
+                    }
+                ],
+            }
+        )
+    )
+    return True
+
+
 def _generate_contours(
-    pbf_path: Path, cog_dir: Path, work_dir: Path, interval: int = 20
+    pbf_path: Path,
+    cog_dir: Path,
+    work_dir: Path,
+    interval: int = 20,
+    poly_geojson: Path | None = None,
 ) -> Path | None:
     """Genera un GeoPackage de corbes de nivell amb l'extensio del PBF.
 
@@ -217,6 +298,25 @@ def _generate_contours(
         ],
         check=True,
     )
+    if poly_geojson is not None:
+        # Només es conserva el DEM dins del poligon real; fora queda com a nodata
+        clipped = work_dir / "clipped.vrt"
+        subprocess.run(
+            [
+                "gdalwarp",
+                "-of",
+                "VRT",
+                "-cutline",
+                str(poly_geojson),
+                "-dstnodata",
+                "-9999",
+                "-overwrite",
+                str(cropped),
+                str(clipped),
+            ],
+            check=True,
+        )
+        cropped = clipped
     subprocess.run(
         [
             "gdal_contour",
@@ -281,7 +381,19 @@ def process_map(
             contours = None
             if contour_schema_path.is_file():
                 try:
-                    contours = _generate_contours(pbf_path, cog_dir, temp_path)
+                    poly_geojson = None
+                    poly_path = temp_path / "region.poly"
+                    geojson_path = temp_path / "region.geojson"
+                    try:
+                        if _download_poly(validated_url, poly_path) and (
+                            _poly_to_geojson(poly_path, geojson_path)
+                        ):
+                            poly_geojson = geojson_path
+                    except Exception:
+                        logger.exception("Poligon invàlid; s'usa el bbox del PBF")
+                    contours = _generate_contours(
+                        pbf_path, cog_dir, temp_path, poly_geojson=poly_geojson
+                    )
                 except Exception:
                     logger.exception("Error generant corbes; es continua sense")
 
