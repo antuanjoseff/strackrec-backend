@@ -81,7 +81,7 @@ layers:
               highway: [residential, living_street, track]
             10:
               highway: [service, pedestrian, cycleway]
-            14:
+            13:
               highway: [footway, path, bridleway, steps]
         include_when:
           highway: __any__
