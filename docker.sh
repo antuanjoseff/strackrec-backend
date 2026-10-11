@@ -7,6 +7,7 @@ sudo -E docker compose -f docker-compose.yml -f docker-compose.local.yml exec -T
 
 # Fer el build en local
 sudo docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
+sudo docker compose -f docker-compose.yml  up -d --build
 
 # Aixecar en local
 docker compose -f docker-compose.yml -f docker-compose.local.yml ps
