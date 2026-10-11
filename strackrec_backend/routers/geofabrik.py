@@ -1,5 +1,7 @@
+import http.client
 import json
 import math
+import time
 from urllib.error import URLError
 from urllib.request import urlopen
 
@@ -9,6 +11,8 @@ from fastapi.responses import JSONResponse
 router = APIRouter()
 
 GEOFABRIK_INDEX_URL = "https://download.geofabrik.de/index-v1.json"
+CACHE_TTL_SECONDS = 6 * 60 * 60
+_cache = {"expires": 0.0, "content": None}
 
 
 def _coordinate_pairs(coordinates):
@@ -50,6 +54,10 @@ def _feature_bbox(feature):
 
 @router.get("/geofabrik/regions")
 def obtenir_regions_geofabrik():
+    if _cache["content"] is not None and time.monotonic() < _cache["expires"]:
+        return JSONResponse(
+            content=_cache["content"], media_type="application/geo+json"
+        )
     try:
         with urlopen(GEOFABRIK_INDEX_URL, timeout=30) as response:
             collection = json.load(response)
@@ -76,19 +84,30 @@ def obtenir_regions_geofabrik():
             if properties.get("id") in parent_ids:
                 continue
 
+            try:
+                bbox = _feature_bbox(feature)
+            except ValueError:
+                continue
+
             leaf_features.append(
                 {
                     "type": "Feature",
-                    "bbox": _feature_bbox(feature),
+                    "bbox": bbox,
                     "properties": properties,
                 }
             )
 
-        return JSONResponse(
-            content={"type": "FeatureCollection", "features": leaf_features},
-            media_type="application/geo+json",
-        )
-    except (URLError, TimeoutError, json.JSONDecodeError, ValueError) as error:
+        content = {"type": "FeatureCollection", "features": leaf_features}
+        _cache["expires"] = time.monotonic() + CACHE_TTL_SECONDS
+        _cache["content"] = content
+        return JSONResponse(content=content, media_type="application/geo+json")
+    except (
+        URLError,
+        OSError,
+        http.client.HTTPException,
+        json.JSONDecodeError,
+        ValueError,
+    ) as error:
         raise HTTPException(
             status_code=502,
             detail=f"No s'ha pogut obtenir l'índex de Geofabrik: {error}",

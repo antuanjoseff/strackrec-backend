@@ -50,6 +50,7 @@ services:
     volumes:
       - /data/apps/mdt/mbtiles:/app/mbtiles
       - /data/apps/mdt/dades_cog:/app/dades_cog:ro
+      - ./planetiler/planetiler-corbes.yaml:/opt/planetiler/planetiler-corbes.yaml:ro
     depends_on:
       redis:
         condition: service_healthy
